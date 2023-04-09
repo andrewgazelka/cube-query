@@ -25,7 +25,9 @@ fn run() -> anyhow::Result<()> {
     let filter = args.filter.unwrap_or_default().to_ascii_lowercase();
     let db = paths::obtain_db(&args.chip)?;
     let db = std::fs::read_to_string(db)?;
-    let db = parse::parse_xml(&db)?;
+    let mut db = parse::parse_xml(&db)?;
+
+    db.pins.sort_by_key(|pin| pin.name.to_ascii_lowercase());
 
     for pin in db.pins {
         for signal in pin.signals {

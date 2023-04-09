@@ -1,5 +1,8 @@
 # cube-query
 
+I recommend looking at [stm32-data](https://github.com/embassy-rs/stm32-data)
+if you are looking to expand on this.
+
 Query the CubeMX database from the command line.
 Currently only supports querying pins.
 

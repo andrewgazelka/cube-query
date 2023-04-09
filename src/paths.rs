@@ -45,7 +45,7 @@ pub fn obtain_db(chip: &str) -> anyhow::Result<PathBuf> {
     }
 }
 
-fn obtain_db_folder() -> anyhow::Result<PathBuf> {
+pub fn obtain_db_folder() -> anyhow::Result<PathBuf> {
     let paths = db_paths()?;
     for path in paths {
         if path.exists() {
@@ -78,4 +78,15 @@ fn db_paths_unix() -> Vec<PathBuf> {
     let paths = vec!["/Applications/STMicroelectronics/STM32CubeMX.app/Contents/Resources/db/mcu"];
 
     paths.into_iter().map(|p| PathBuf::from(p)).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_db_exists() {
+        let db = obtain_db_folder().unwrap();
+        assert!(db.exists());
+    }
 }

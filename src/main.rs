@@ -1,6 +1,8 @@
 use std::process::ExitCode;
 
 use clap::Parser;
+use prettytable::format::consts::FORMAT_CLEAN;
+use prettytable::{row, Attr, Cell, Row, Table};
 
 mod parse_ip;
 mod parse_mcu;
@@ -38,6 +40,14 @@ fn run() -> anyhow::Result<()> {
 
     db.pins.sort_by_key(|pin| pin.name.to_ascii_lowercase());
 
+    let mut table = Table::new();
+    table.set_format(*FORMAT_CLEAN);
+    table.add_row(Row::new(vec![
+        Cell::new("Pin").with_style(Attr::Bold),
+        Cell::new("Use").with_style(Attr::Bold),
+        Cell::new("Mode").with_style(Attr::Bold),
+    ]));
+
     for pin in db.pins {
         for signal in pin.signals {
             let signal_name = signal.name.to_ascii_lowercase();
@@ -57,10 +67,12 @@ fn run() -> anyhow::Result<()> {
                     .unwrap();
                 let (_, signal_value, _) = signal_name_components(&signal_value).unwrap();
 
-                println!("{}: {}\t({})", pin.name, signal.name, signal_value);
+                table.add_row(row![pin.name, signal.name, signal_value]);
             }
         }
     }
+
+    table.printstd();
 
     Ok(())
 }

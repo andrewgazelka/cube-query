@@ -1,5 +1,4 @@
-use std::process::ExitCode;
-
+pub use clap;
 use clap::Parser;
 use prettytable::format::consts::FORMAT_CLEAN;
 use prettytable::{row, Attr, Cell, Row, Table};
@@ -14,28 +13,14 @@ pub struct Args {
     pub filter: Option<String>,
 }
 
-fn main() -> ExitCode {
-    let args = Args::parse();
-    if let Err(e) = run(&args) {
-        eprintln!("Error: {}", e);
-        ExitCode::FAILURE
-    } else {
-        ExitCode::SUCCESS
-    }
-}
-
 pub fn run(args: &Args) -> anyhow::Result<()> {
     let filter = args.filter.clone().unwrap_or_default().to_ascii_lowercase();
     let db = paths::obtain_db(&args.chip)?;
     let db = std::fs::read_to_string(db)?;
 
-    let db = std::thread::spawn(move || {
-        parse_mcu::parse_xml(&db)
-    });
+    let db = std::thread::spawn(move || parse_mcu::parse_xml(&db));
 
-    let gpios = std::thread::spawn(move || {
-        parse_ip::parse_ip()
-    });
+    let gpios = std::thread::spawn(move || parse_ip::parse_ip());
 
     let mut db = db.join().unwrap()?;
     let gpios = gpios.join().unwrap()?;

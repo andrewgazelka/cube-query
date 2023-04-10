@@ -9,13 +9,14 @@ mod parse_mcu;
 mod paths;
 
 #[derive(Debug, Parser)]
-struct Args {
-    chip: String,
-    filter: Option<String>,
+pub struct Args {
+    pub chip: String,
+    pub filter: Option<String>,
 }
 
 fn main() -> ExitCode {
-    if let Err(e) = run() {
+    let args = Args::parse();
+    if let Err(e) = run(&args) {
         eprintln!("Error: {}", e);
         ExitCode::FAILURE
     } else {
@@ -23,13 +24,21 @@ fn main() -> ExitCode {
     }
 }
 
-fn run() -> anyhow::Result<()> {
-    let args = Args::parse();
-    let filter = args.filter.unwrap_or_default().to_ascii_lowercase();
+pub fn run(args: &Args) -> anyhow::Result<()> {
+    let filter = args.filter.clone().unwrap_or_default().to_ascii_lowercase();
     let db = paths::obtain_db(&args.chip)?;
     let db = std::fs::read_to_string(db)?;
-    let mut db = parse_mcu::parse_xml(&db)?;
-    let gpios = parse_ip::parse_ip()?;
+
+    let db = std::thread::spawn(move || {
+        parse_mcu::parse_xml(&db)
+    });
+
+    let gpios = std::thread::spawn(move || {
+        parse_ip::parse_ip()
+    });
+
+    let mut db = db.join().unwrap()?;
+    let gpios = gpios.join().unwrap()?;
 
     // convert gpios into HashMap name: Vec<PinSignal>
     let gpios = gpios
@@ -65,7 +74,8 @@ fn run() -> anyhow::Result<()> {
                     .flat_map(|p| &p.possible_values)
                     .next()
                     .unwrap();
-                let (_, signal_value, _) = signal_name_components(&signal_value).unwrap();
+
+                let (_, signal_value, _) = signal_name_components(signal_value).unwrap();
 
                 table.add_row(row![pin.name, signal.name, signal_value]);
             }

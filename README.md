@@ -9,7 +9,7 @@ Currently only supports querying pins.
 Example:
 
 ```
-$ cr -- stm32h743zitx tim1
+$ cube-query stm32h743zitx tim1
 
  Pin           Use               Mode
  PA0           TIM15_BKIN        AF4

@@ -13,6 +13,12 @@ pub struct Args {
     pub filter: Option<String>,
 }
 
+struct PinRow {
+    pin: String,
+    r#use: String,
+    mode: String,
+}
+
 pub fn run(args: &Args) -> anyhow::Result<()> {
     let filter = args.filter.clone().unwrap_or_default().to_ascii_lowercase();
     let db = paths::obtain_db(&args.chip)?;
@@ -22,7 +28,7 @@ pub fn run(args: &Args) -> anyhow::Result<()> {
 
     let gpios = std::thread::spawn(move || parse_ip::parse_ip());
 
-    let mut db = db.join().unwrap()?;
+    let db = db.join().unwrap()?;
     let gpios = gpios.join().unwrap()?;
 
     // convert gpios into HashMap name: Vec<PinSignal>
@@ -32,15 +38,7 @@ pub fn run(args: &Args) -> anyhow::Result<()> {
         .map(|pin| (pin.name.to_string(), pin.pin_signals))
         .collect::<std::collections::HashMap<_, _>>();
 
-    db.pins.sort_by_key(|pin| pin.name.to_ascii_lowercase());
-
-    let mut table = Table::new();
-    table.set_format(*FORMAT_CLEAN);
-    table.add_row(Row::new(vec![
-        Cell::new("Pin").with_style(Attr::Bold),
-        Cell::new("Use").with_style(Attr::Bold),
-        Cell::new("Mode").with_style(Attr::Bold),
-    ]));
+    let mut pin_row = Vec::with_capacity(db.pins.len());
 
     for pin in db.pins {
         for signal in pin.signals {
@@ -62,9 +60,26 @@ pub fn run(args: &Args) -> anyhow::Result<()> {
 
                 let (_, signal_value, _) = signal_name_components(signal_value).unwrap();
 
-                table.add_row(row![pin.name, signal.name, signal_value]);
+                pin_row.push(PinRow {
+                    pin: pin.name.to_string(),
+                    r#use: signal.name.to_string(),
+                    mode: signal_value.to_string(),
+                });
             }
         }
+    }
+
+    pin_row.sort_by_key(|row| row.r#use.to_ascii_lowercase());
+
+    let mut table = Table::new();
+    table.set_format(*FORMAT_CLEAN);
+    table.add_row(Row::new(vec![
+        Cell::new("Use").with_style(Attr::Bold),
+        Cell::new("Pin").with_style(Attr::Bold),
+        Cell::new("Mode").with_style(Attr::Bold),
+    ]));
+    for row in pin_row {
+        table.add_row(row![row.r#use, row.pin, row.mode]);
     }
 
     table.printstd();
